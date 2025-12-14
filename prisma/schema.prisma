@@ -1,0 +1,141 @@
+// Prisma 스키마
+// 데이터베이스 모델 정의
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 사용자 모델
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 구독 정보
+  subscription  Subscription?
+
+  // 게임 데이터
+  gameSaves     GameSave[]
+  achievements  UserAchievement[]
+
+  // 리더보드
+  leaderboardEntries LeaderboardEntry[]
+}
+
+// 구독 모델
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCustomerId  String?  @unique
+  stripeSubscriptionId String? @unique
+  stripePriceId     String?
+
+  status            SubscriptionStatus @default(INACTIVE)
+  plan              SubscriptionPlan   @default(FREE)
+
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean  @default(false)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PREMIUM
+}
+
+// 게임 저장 모델
+model GameSave {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  slotNumber    Int      // 저장 슬롯 번호 (1-3)
+  saveName      String?
+
+  // 게임 상태 (JSON으로 저장)
+  gameState     Json
+
+  // 통계
+  currentDate   DateTime
+  portfolioValue Float
+  totalReturn   Float
+  daysPlayed    Int
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, slotNumber])
+}
+
+// 업적 모델
+model Achievement {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String
+  icon        String
+  points      Int      @default(10)
+
+  users       UserAchievement[]
+}
+
+// 사용자-업적 연결 모델
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  unlockedAt    DateTime @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+// 리더보드 모델
+model LeaderboardEntry {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 기간 (월별 리더보드)
+  period        String   // 예: "2024-01"
+
+  // 성적
+  finalPortfolio Float
+  totalReturn    Float
+  totalTrades    Int
+  winRate        Float
+  achievementCount Int
+
+  // 랭킹
+  rank          Int?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, period])
+  @@index([period, totalReturn(sort: Desc)])
+}
