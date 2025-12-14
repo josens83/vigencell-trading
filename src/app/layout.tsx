@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import MonitoringProvider from '@/components/MonitoringProvider';
+import { SkipLink } from '@/components/ui/accessible';
 
 export const metadata: Metadata = {
   title: '바이젠셀 투자 마스터 - 주식 투자 시뮬레이션 게임',
@@ -30,8 +32,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // 접근성: 사용자가 확대/축소할 수 있도록 허용
+  maximumScale: 5,
+  userScalable: true,
   themeColor: '#0f172a',
 };
 
@@ -56,8 +59,13 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
+        <SkipLink targetId="main-content" />
         <ServiceWorkerRegistration />
-        {children}
+        <MonitoringProvider>
+          <main id="main-content" tabIndex={-1}>
+            {children}
+          </main>
+        </MonitoringProvider>
         <PWAInstallPrompt />
       </body>
     </html>
