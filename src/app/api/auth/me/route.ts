@@ -22,6 +22,21 @@ export async function GET() {
             achievement: true,
           },
         },
+        gameSaves: {
+          select: {
+            slotNumber: true,
+            saveName: true,
+            portfolioValue: true,
+            totalReturn: true,
+            daysPlayed: true,
+            updatedAt: true,
+          },
+          orderBy: { slotNumber: 'asc' },
+        },
+        leaderboardEntries: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
     });
 
@@ -33,12 +48,19 @@ export async function GET() {
     }
 
     return NextResponse.json({
+      success: true,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        subscription: user.subscription,
+        createdAt: user.createdAt,
+        subscription: user.subscription || {
+          plan: 'FREE',
+          status: 'ACTIVE',
+        },
         achievements: user.achievements,
+        gameSaves: user.gameSaves,
+        latestLeaderboard: user.leaderboardEntries[0] || null,
       },
     });
   } catch (error) {
